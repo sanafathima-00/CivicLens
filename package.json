@@ -1,0 +1,64 @@
+{
+  "name": "civiclens",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test:complaints": "node --import tsx --test src/infrastructure/providers/seeded/seeded-complaint-provider.test.ts",
+    "test:sites": "node --import tsx --test src/infrastructure/providers/seeded/seeded-site-provider.test.ts",
+    "test:candidates": "node --import tsx --test src/infrastructure/providers/opencity/seiaa-candidate-source.test.ts",
+    "test:investigations": "node --import tsx --test src/application/investigations/create-investigation-from-candidate.test.ts src/infrastructure/persistence/prisma-investigation-store.integration.test.ts src/app/api/investigations/investigations.route.test.ts src/app/api/investigations/investigations.unavailable.route.test.ts",
+    "test:evidence": "node --import tsx --test src/application/evidence/retrieve-evidence-for-investigation.test.ts src/application/evidence/get-investigation-evidence-asset.test.ts src/infrastructure/providers/evidence/persisted-site-origin-evidence-provider.test.ts src/infrastructure/storage/local-evidence-asset-store.test.ts src/infrastructure/persistence/prisma-evidence-store.integration.test.ts src/app/api/investigations/evidence-routes.test.ts",
+    "test:imagery": "node --import tsx --test src/domain/imagery/derived-context-aoi.test.ts src/infrastructure/providers/imagery/planetary-computer-sentinel2-provider.test.ts src/application/imagery/retrieve-historical-imagery-for-investigation.test.ts src/app/api/investigations/[id]/imagery/imagery.route.test.ts",
+    "test:construction-change": "node --import tsx --test src/domain/construction-change/deterministic-imagery-comparison.test.ts src/application/construction-change/create-construction-change-analysis.test.ts src/app/api/investigations/[[]id[]]/change-analysis/change-analysis.route.test.ts src/infrastructure/persistence/prisma-construction-change-store.integration.test.ts",
+    "test:vision": "node --import tsx --test src/domain/construction-change/vision-analysis.test.ts src/application/construction-change/run-vision-analysis.test.ts src/infrastructure/providers/vision/openai-vision-analyzer.test.ts src/infrastructure/persistence/prisma-construction-change-store.integration.test.ts src/app/api/investigations/[[]id[]]/change-analysis/[[]analysisId[]]/vision/vision-route-handlers.test.ts src/features/investigations/historical-imagery-presentation.test.ts",
+    "test:authority-mapping": "node --import tsx --test src/infrastructure/providers/seeded/seeded-administrative-mapping-provider.test.ts",
+    "prisma:generate": "prisma generate",
+    "prisma:validate": "prisma validate"
+  },
+  "engines": {
+    "node": "24.x"
+  },
+  "packageManager": "npm@11.19.0",
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
+    "dotenv": "^17.4.2",
+    "fast-xml-parser": "^5.11.1",
+    "mapbox-gl": "^3.30.0",
+    "next": "16.3.4",
+    "openai": "^7.10.0",
+    "pg": "^8.23.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^24.13.3",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.4",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.6",
+    "prisma": "^7.10.0",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.13",
+    "typescript": "^5"
+  },
+  "allowScripts": {
+    "@prisma/engines@7.10.0": true,
+    "esbuild@0.28.2": true,
+    "prisma@7.10.0": true,
+    "unrs-resolver@1.12.2": true
+  }
+}

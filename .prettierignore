@@ -1,0 +1,10 @@
+.next
+node_modules
+src/generated/prisma
+coverage
+docs
+openspec
+.agents
+.claude
+.codex
+foundation-scaffold-temp

@@ -1,0 +1,550 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ComplaintStatus {
+  REPORTED
+  ACKNOWLEDGED
+  ASSIGNED
+  IN_PROGRESS
+  MARKED_RESOLVED
+  CLOSED
+  REOPENED
+  UNKNOWN
+}
+
+enum ComplaintCategory {
+  WATERLOGGING
+  ILLEGAL_DUMPING
+  DRAIN_OBSTRUCTION
+  ENCROACHMENT
+  CONSTRUCTION_DEBRIS
+  ROAD_BLOCKAGE
+  OTHER
+}
+
+enum ComplaintSourceKind {
+  SEEDED_DEMO
+  AUTHORIZED_EXTERNAL
+}
+
+enum ComplaintSourceEventType {
+  REPORTED
+  ACKNOWLEDGED
+  ASSIGNED
+  WORK_REPORTED
+  STATUS_CHANGED
+  MARKED_RESOLVED
+  CLOSED
+  REOPENED
+  NOTE
+}
+
+enum SiteSourceType {
+  SEEDED_DEMO
+  ANALYST_PREPARED
+  GOVERNMENT_BUILDING_PERMISSION
+  K_RERA
+  GIS
+  OPENCITY
+  VERIFIED_PUBLIC
+  OTHER
+}
+
+enum CoordinateQuality {
+  EXACT
+  APPROXIMATE
+  PREPARED
+}
+
+enum SiteLocationState {
+  MAPPABLE
+  NOT_MAPPABLE
+  UNRESOLVED
+}
+
+enum InvestigationStatus {
+  CREATED
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+enum EvidenceKind {
+  SITE_SOURCE_RECORD
+  IMAGERY
+  DOCUMENT
+  GOVERNMENT_RECORD
+  CIVIC_SIGNAL
+  SPATIAL_DATA
+  ADMINISTRATIVE_RECORD
+  OTHER
+}
+
+enum EvidenceSourceClassification {
+  LIVE_SOURCE
+  IMPORTED_SNAPSHOT
+  PREPARED
+  SEEDED_TEST
+}
+
+enum EvidenceRetrievalStatus {
+  AVAILABLE
+  PARTIAL
+  UNAVAILABLE
+  UNRESOLVED
+}
+
+enum EvidenceTimePrecision {
+  EXACT
+  DATE
+  MONTH
+  YEAR
+  APPROXIMATE
+}
+
+enum EvidenceCompleteness {
+  COMPLETE
+  PARTIAL
+  UNKNOWN
+}
+
+enum EvidenceIntegrity {
+  VERIFIED_BY_HASH
+  SOURCE_DECLARED
+  NOT_VERIFIED
+}
+
+enum ImageryComparability {
+  COMPARABLE
+  LIMITED
+  NOT_COMPARABLE
+}
+
+enum ChangeEvidenceSufficiency {
+  SUFFICIENT_FOR_CONSERVATIVE_VISUAL_STATEMENT
+  LIMITED
+  INSUFFICIENT
+}
+
+enum ChangeEpistemicState {
+  OBSERVED
+  INFERRED
+  UNRESOLVED
+}
+
+enum VisualChangeOutcome {
+  VISIBLE_CONTEXT_CHANGE_UNCLASSIFIED
+  APPARENT_LARGE_SCALE_BUILT_CONTEXT_CHANGE
+  APPARENT_GROUND_DISTURBANCE_OR_SURFACE_CHANGE
+  APPARENT_OPEN_CONTEXT_TO_BUILT_SURFACE_CHANGE
+  NO_SIGNIFICANT_VISIBLE_CONTEXT_CHANGE
+  INSUFFICIENT_EVIDENCE
+}
+
+enum EvidenceRole {
+  ORIGINAL
+  BEFORE
+  LATEST
+  SUPPORTING
+  AUTHORITY_RESPONSE
+}
+
+enum EvidenceProvenance {
+  SOURCE_COMPLAINT
+  PREPARED
+  SIMULATED
+  GENERATED
+  LICENSED_EXTERNAL
+  AUTHORITY_RESPONSE
+}
+
+enum AssessmentOutcome {
+  RESOLVED
+  LIKELY_UNRESOLVED
+  INCONCLUSIVE
+}
+
+enum CaseLifecycleStatus {
+  OPEN
+  VERIFIED
+  ESCALATED
+  RESPONSE_RECORDED
+  CLOSED
+}
+
+enum CaseActorType {
+  USER
+  SYSTEM
+  PROVIDER
+  AUTHORITY
+}
+
+enum CaseEventType {
+  COMPLAINT_RETRIEVED
+  EVIDENCE_RETRIEVED
+  ASSESSMENT_CREATED
+  ESCALATION_PACKAGE_GENERATED
+  ESCALATION_ACTION_RECORDED
+  AUTHORITY_RESPONSE_RECORDED
+  REVERIFICATION_CREATED
+}
+
+enum EscalationActionStatus {
+  GENERATED
+  SIMULATED
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  RESPONSE_RECORDED
+}
+
+model Complaint {
+  id                      String          @id @default(cuid())
+  complaintNumber         String          @unique
+  provider                String
+  providerComplaintId     String
+  sourceKind              ComplaintSourceKind
+  title                   String
+  category                ComplaintCategory
+  description             String
+  sourceStatus            ComplaintStatus
+  sourceStatusRaw         String?
+  reportedAt              DateTime
+  sourceUpdatedAt         DateTime?
+  markedResolvedAt        DateTime?
+  closedAt                DateTime?
+  sourceRecordReference   String?
+  sourceOriginalEvidenceReference String?
+  sourceRetrievedAt       DateTime
+  normalizedRecordVersion String
+  location                Location?
+  sourceEvents            ComplaintSourceEvent[]
+  evidenceAssets          EvidenceAsset[]
+  cases                   Case[]
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+
+  @@unique([provider, providerComplaintId])
+}
+
+model Site {
+  id                      String            @id @default(cuid())
+  label                   String?
+  originProviderId        String
+  originProviderLabel     String
+  originSourceType        SiteSourceType
+  originIsLive            Boolean
+  originExternalRecordId  String?
+  originRetrievedAt       DateTime
+  originSourceReference   String?
+  originSourceVersion     String?
+  originSourceContentHash String?
+  originLicenseDesignation String?
+  latitude                Decimal?
+  longitude               Decimal?
+  coordinatePrecisionMeters Int?
+  coordinateQuality       CoordinateQuality?
+  locationState           SiteLocationState
+  displayAddress          String?
+  locality                String?
+  neighborhood            String?
+  city                    String?
+  postalCode              String?
+  descriptiveLocation     String?
+  investigations          Investigation[]
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+
+  @@index([originProviderId])
+  @@index([originSourceType])
+}
+
+model Investigation {
+  id                 String              @id @default(cuid())
+  siteId             String
+  status             InvestigationStatus @default(CREATED)
+  site               Site                @relation(fields: [siteId], references: [id], onDelete: Restrict)
+  evidenceRetrievals EvidenceRetrieval[]
+  constructionChangeAnalyses ConstructionChangeAnalysis[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  @@index([siteId, createdAt])
+}
+
+model EvidenceRetrieval {
+  id                   String                       @id @default(cuid())
+  investigationId      String
+  providerId           String
+  providerLabel        String
+  sourceClassification EvidenceSourceClassification
+  isLive               Boolean
+  status               EvidenceRetrievalStatus
+  sourceVersion        String?
+  sourceReference      String?
+  sourceContentHash    String?
+  licenseDesignation   String?
+  retrievedAt          DateTime
+  limitations          Json
+  investigation        Investigation                @relation(fields: [investigationId], references: [id], onDelete: Restrict)
+  items                EvidenceItem[]
+  createdAt            DateTime                     @default(now())
+
+  @@index([investigationId, retrievedAt])
+  @@index([investigationId, providerId])
+}
+
+model EvidenceItem {
+  id                     String                @id @default(cuid())
+  retrievalId            String
+  kind                   EvidenceKind
+  sourceItemKey          String
+  label                  String?
+  externalRecordId       String?
+  sourceReference        String?
+  sourceVersion          String?
+  capturedAt             DateTime?
+  capturedAtPrecision    EvidenceTimePrecision?
+  observedAt             DateTime?
+  observedAtPrecision    EvidenceTimePrecision?
+  publishedAt            DateTime?
+  publishedAtPrecision   EvidenceTimePrecision?
+  sourceUpdatedAt        DateTime?
+  sourceUpdatedPrecision EvidenceTimePrecision?
+  completeness           EvidenceCompleteness
+  integrity              EvidenceIntegrity
+  qualityNotes           String?
+  limitations            Json
+  metadata               Json
+  assetStorageKey        String?
+  assetContentType       String?
+  assetByteSize          Int?
+  assetSha256            String?
+  retrieval              EvidenceRetrieval     @relation(fields: [retrievalId], references: [id], onDelete: Restrict)
+  changeAnalysesAsBefore ConstructionChangeAnalysis[] @relation("BeforeImageryEvidence")
+  changeAnalysesAsAfter  ConstructionChangeAnalysis[] @relation("AfterImageryEvidence")
+  visionAnalysesAsBefore VisionAnalysis[] @relation("VisionBeforeImageryEvidence")
+  visionAnalysesAsAfter  VisionAnalysis[] @relation("VisionAfterImageryEvidence")
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+
+  @@unique([retrievalId, sourceItemKey])
+  @@index([retrievalId, kind, sourceItemKey])
+  @@index([assetSha256])
+}
+
+model ConstructionChangeAnalysis {
+  id                   String                     @id @default(cuid())
+  investigationId      String
+  beforeEvidenceItemId String
+  afterEvidenceItemId  String
+  aoiIdentity          Json
+  comparisonPolicyId   String
+  comparability        ImageryComparability
+  deterministicFacts   Json
+  evidenceSufficiency  ChangeEvidenceSufficiency
+  outcome              VisualChangeOutcome
+  epistemicState       ChangeEpistemicState
+  observedIndicators   Json
+  limitations          Json
+  investigation        Investigation              @relation(fields: [investigationId], references: [id], onDelete: Restrict)
+  beforeEvidenceItem   EvidenceItem               @relation("BeforeImageryEvidence", fields: [beforeEvidenceItemId], references: [id], onDelete: Restrict)
+  afterEvidenceItem    EvidenceItem               @relation("AfterImageryEvidence", fields: [afterEvidenceItemId], references: [id], onDelete: Restrict)
+  visionAnalyses       VisionAnalysis[]
+  createdAt            DateTime                   @default(now())
+
+  @@index([investigationId, createdAt])
+  @@index([beforeEvidenceItemId])
+  @@index([afterEvidenceItemId])
+}
+
+model VisionAnalysis {
+  id                           String                     @id @default(cuid())
+  constructionChangeAnalysisId String
+  beforeEvidenceItemId         String
+  afterEvidenceItemId          String
+  providerId                   String
+  providerLabel                String
+  model                        String
+  promptVersion                String
+  schemaVersion                String
+  inputFingerprint             String
+  outcome                      VisualChangeOutcome
+  epistemicState               ChangeEpistemicState
+  observedIndicators           Json
+  interpretation               String?
+  limitations                  Json
+  constructionChangeAnalysis   ConstructionChangeAnalysis @relation(fields: [constructionChangeAnalysisId], references: [id], onDelete: Restrict)
+  beforeEvidenceItem           EvidenceItem               @relation("VisionBeforeImageryEvidence", fields: [beforeEvidenceItemId], references: [id], onDelete: Restrict)
+  afterEvidenceItem            EvidenceItem               @relation("VisionAfterImageryEvidence", fields: [afterEvidenceItemId], references: [id], onDelete: Restrict)
+  createdAt                    DateTime                   @default(now())
+
+  @@index([constructionChangeAnalysisId, createdAt])
+  @@index([providerId, model])
+  @@index([beforeEvidenceItemId])
+  @@index([afterEvidenceItemId])
+}
+
+model Location {
+  id                  String    @id @default(cuid())
+  complaintId         String    @unique
+  latitude            Decimal?  @db.Decimal(9, 6)
+  longitude           Decimal?  @db.Decimal(9, 6)
+  coordinatePrecision Int?
+  coordinateSource    String?
+  displayAddress      String?
+  landmark            String?
+  jurisdiction        String?
+  zone                String?
+  ward                String?
+  boundaryReference   String?
+  boundaryVersion     String?
+  matchQuality        String?
+  limitationNotes     String?
+  complaint           Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
+model ComplaintSourceEvent {
+  id                    String                   @id @default(cuid())
+  complaintId           String
+  providerEventId       String
+  eventType             ComplaintSourceEventType
+  rawEventType          String?
+  resultingSourceStatus ComplaintStatus?
+  occurredAt            DateTime
+  summary               String
+  sourceRecordReference String?
+  sourceEventVersion    String?
+  importedAt            DateTime                 @default(now())
+  complaint             Complaint                @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+
+  @@unique([complaintId, providerEventId])
+  @@index([complaintId, occurredAt])
+}
+
+model EvidenceAsset {
+  id                   String                   @id @default(cuid())
+  complaintId          String?
+  role                 EvidenceRole
+  provider             String
+  providerReference    String?
+  storageReference     String
+  provenance           EvidenceProvenance
+  capturedAt           DateTime?
+  publishedAt          DateTime?
+  retrievedAt          DateTime?
+  availableAt          DateTime?
+  locationCoverage     Json?
+  viewpoint            String?
+  qualityNotes         String?
+  contentType          String?
+  byteSize             Int?
+  integrityHash        String?
+  accessClassification String?
+  complaint            Complaint?               @relation(fields: [complaintId], references: [id], onDelete: SetNull)
+  beforeForAssessments VerificationAssessment[] @relation("BeforeEvidence")
+  latestForAssessments VerificationAssessment[] @relation("LatestEvidence")
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+}
+
+model Case {
+  id                   String                   @id @default(cuid())
+  complaintId          String
+  currentStatus        CaseLifecycleStatus      @default(OPEN)
+  complaint            Complaint                @relation(fields: [complaintId], references: [id], onDelete: Restrict)
+  authorityAssignments AuthorityAssignment[]
+  assessments          VerificationAssessment[]
+  events               CaseEvent[]
+  escalationPackages   EscalationPackage[]
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+}
+
+model AuthorityAssignment {
+  id              String   @id @default(cuid())
+  caseId          String
+  jurisdiction    String?
+  zone            String?
+  ward            String?
+  service         String?
+  department      String?
+  authorityRole   String?
+  ruleReference   String?
+  mappingSource   String?
+  mappingVersion  String?
+  limitationNotes String?
+  resolvedAt      DateTime @default(now())
+  case            Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+}
+
+model VerificationAssessment {
+  id                     String            @id @default(cuid())
+  caseId                 String
+  beforeEvidenceId       String
+  latestEvidenceId       String
+  outcome                AssessmentOutcome
+  modelConfidenceLabel   String?
+  modelConfidenceValue   Decimal?          @db.Decimal(5, 2)
+  observations           Json
+  limitations            Json
+  recommendation         String?
+  serviceVersion         String?
+  configurationReference String?
+  schemaVersion          String
+  validationStatus       String
+  failureContext         Json?
+  case                   Case              @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  beforeEvidence         EvidenceAsset     @relation("BeforeEvidence", fields: [beforeEvidenceId], references: [id], onDelete: Restrict)
+  latestEvidence         EvidenceAsset     @relation("LatestEvidence", fields: [latestEvidenceId], references: [id], onDelete: Restrict)
+  createdAt              DateTime          @default(now())
+}
+
+model CaseEvent {
+  id             String        @id @default(cuid())
+  caseId         String
+  eventType      CaseEventType
+  actorType      CaseActorType
+  affectedRecord String?
+  correlationId  String?
+  summary        String
+  occurredAt     DateTime      @default(now())
+  case           Case          @relation(fields: [caseId], references: [id], onDelete: Cascade)
+}
+
+model EscalationPackage {
+  id               String             @id @default(cuid())
+  caseId           String
+  version          Int
+  contentReference String?
+  includedEvidence Json
+  includedMapping  Json
+  case             Case               @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  actions          EscalationAction[]
+  createdAt        DateTime           @default(now())
+
+  @@unique([caseId, version])
+}
+
+model EscalationAction {
+  id                  String                 @id @default(cuid())
+  escalationPackageId String
+  status              EscalationActionStatus
+  deliveryProvider    String?
+  deliveryReference   String?
+  deliveryEvidence    Json?
+  failureSummary      String?
+  escalationPackage   EscalationPackage      @relation(fields: [escalationPackageId], references: [id], onDelete: Cascade)
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+}
